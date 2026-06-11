@@ -140,9 +140,7 @@ class FavoriteController extends Controller
         }
     }
 
-    /**
-     * Hapus Favorite
-     */
+    
     public function destroy($imdbId)
     {
         try {
