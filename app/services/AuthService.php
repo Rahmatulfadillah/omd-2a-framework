@@ -10,36 +10,76 @@ use Illuminate\Support\Facades\Session;
 
 class AuthService
 {
+    /**
+     * Register User
+     */
     public function register($data)
     {
-        $user = User::create([
-            'name'      => $data['name'],
-            'email'     => $data['email'],
-            'password'  => Hash::make($data['password'])
-        ]);
+        try {
 
-        if ($user) {
-            return true;
+            $user = User::create([
+                'name'     => $data['name'],
+                'email'    => $data['email'],
+                'password' => Hash::make($data['password']),
+            ]);
+
+            return $user ? true : false;
+
+        } catch (\Throwable $th) {
+
+            Log::error('Register Failed', [
+                'message' => $th->getMessage(),
+                'line'    => $th->getLine(),
+            ]);
+
+            return false;
         }
-
-        return false;
     }
 
+    /**
+     * Login User
+     */
     public function login($data)
     {
         try {
-            if (Auth::attempt(['email' => $data['email'],'password' => $data['password']])) {
+
+            // cek login
+            if (Auth::attempt([
+                'email'    => $data['email'],
+                'password' => $data['password']
+            ])) {
+
+                // ambil data user login
+                $user = Auth::user();
+
+                // simpan session
                 Session::put('logged_in', true);
+                Session::put('user_id', $user->id);
+                Session::put('user_name', $user->name);
+                Session::put('user_email', $user->email);
+
                 return true;
-            };
+            }
+
             return false;
-        } catch (\Exception $th) {
+
+        } catch (\Throwable $th) {
+
             Log::error('Auth service login failed', [
-                'message'   => $th->getMessage(),
+                'message' => $th->getMessage(),
+                'line'    => $th->getLine(),
             ]);
+
             return false;
         }
     }
-}
 
-?>
+    /**
+     * Logout User
+     */
+    public function logout()
+    {
+        Auth::logout();
+        Session::flush();
+    }
+}

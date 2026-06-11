@@ -6,6 +6,7 @@ return [
     "login"   => "Masuk",
     "register" => "Daftar",
     "email" => "Email",
+    "Email not registered"=>"Email tidak terdaftar",
     "password" => "Kata Sandi",
     "Password Confirmation" => "Konfirmasi Kata Sandi",
     "create one" => "Buat akun",

@@ -3,6 +3,8 @@
     "register" : "Daftar",
     "email" : "Email",
     "password" : "Kata Sandi",
+        "Email not registered":"Email tidak terdaftar",
+
     "Password Confirmation" : "Konfirmasi Kata Sandi",
     "create one" : "Buat akun",
     "Don't have an account?" : "Belum punya akun?",

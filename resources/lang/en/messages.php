@@ -6,6 +6,7 @@ return [
         "login" => "Login",
     "register" => "Register",
     "email" => "Email",
+    "Email not registered"=>"Email not registered",
     "password" => "Password",
     "Password Confirmation" => "Password Confirmation",
     "create one" => "create one",
