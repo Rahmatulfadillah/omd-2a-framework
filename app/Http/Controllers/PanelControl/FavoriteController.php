@@ -5,189 +5,92 @@ namespace App\Http\Controllers\PanelControl;
 use App\Http\Controllers\Controller;
 use App\Models\Favorite;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class FavoriteController extends Controller
 {
-    /**
-     * Halaman Favorite Movies
-     */
+    // Halaman My Favorites
     public function index()
     {
         try {
+            $favorites = Favorite::where('user_id', Auth::id())
+                                 ->orderBy('created_at', 'desc')
+                                 ->get();
 
-            // cek login
-            if (!session('logged_in')) {
-                return redirect()
-                    ->route('login')
-                    ->with(
-                        'error',
-                        'Silakan login terlebih dahulu.'
-                    );
-            }
-
-            $favorites = Favorite::where(
-                'user_id',
-                session('user_id')
-            )
-            ->latest()
-            ->get();
-
-            return view(
-                'controlpanel.my',
-                compact('favorites')
-            );
+            return view('controlpanel.my', compact('favorites'));
 
         } catch (\Throwable $th) {
-
-            Log::error('Favorite Index Error', [
-                'message' => $th->getMessage(),
-                'file'    => $th->getFile(),
-                'line'    => $th->getLine(),
-            ]);
-
-            return redirect()
-                ->back()
-                ->with(
-                    'error',
-                    'Terjadi kesalahan saat mengambil favorite.'
-                );
+            Log::error('Error fetching favorites: ' . $th->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan.');
         }
     }
 
-    /**
-     * Tambah Favorite
-     */
+    // Tambah Favorite
     public function store(Request $request)
     {
         try {
-
-            // cek login
-            if (!session('logged_in')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Silakan login terlebih dahulu.'
-                ], 401);
-            }
-
-            // cek user_id session
-            if (!session('user_id')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Session user_id tidak ditemukan.',
-                    'session' => session()->all()
-                ], 400);
-            }
-
-            // validasi request
-            $validated = $request->validate([
+            $request->validate([
                 'imdb_id' => 'required|string',
-                'title'   => 'required|string|max:255',
-                'year'    => 'nullable|string|max:10',
+                'title'   => 'required|string',
+                'year'    => 'nullable|string',
                 'poster'  => 'nullable|string',
-                'type'    => 'nullable|string|max:50',
+                'type'    => 'nullable|string',
             ]);
 
-            // cek duplicate favorite
-            $exists = Favorite::where(
-                'user_id',
-                session('user_id')
-            )
-            ->where(
-                'imdb_id',
-                $validated['imdb_id']
-            )
-            ->exists();
+            // Cek apakah sudah ada di favorite
+            $exists = Favorite::where('user_id', Auth::id())
+                               ->where('imdb_id', $request->imdb_id)
+                               ->exists();
 
             if ($exists) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Film sudah ada di favorites!'
-                ], 409);
+                    'message' => 'Film sudah ada di favorites!',
+                ]);
             }
 
-            // simpan favorite
-            $favorite = Favorite::create([
-                'user_id' => session('user_id'),
-                'imdb_id' => $validated['imdb_id'],
-                'title'   => $validated['title'],
-                'year'    => $validated['year'] ?? null,
-                'poster'  => $validated['poster'] ?? null,
-                'type'    => $validated['type'] ?? null,
+            Favorite::create([
+                'user_id' => Auth::id(),
+                'imdb_id' => $request->imdb_id,
+                'title'   => $request->title,
+                'year'    => $request->year,
+                'poster'  => $request->poster,
+                'type'    => $request->type,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Film berhasil ditambahkan ke favorites!',
-                'favorite' => $favorite
             ]);
 
         } catch (\Throwable $th) {
-
-            Log::error('Favorite Store Error', [
-                'message' => $th->getMessage(),
-                'file'    => $th->getFile(),
-                'line'    => $th->getLine(),
-            ]);
-
-            // tampilkan error asli
+            Log::error('Error adding favorite: ' . $th->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage(),
-                'file'    => $th->getFile(),
-                'line'    => $th->getLine(),
+                'message' => 'Terjadi kesalahan.',
             ], 500);
         }
     }
 
-    
+    // Hapus Favorite
     public function destroy($imdbId)
     {
         try {
-
-            // cek login
-            if (!session('logged_in')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Silakan login terlebih dahulu.'
-                ], 401);
-            }
-
-            $deleted = Favorite::where(
-                'user_id',
-                session('user_id')
-            )
-            ->where(
-                'imdb_id',
-                $imdbId
-            )
-            ->delete();
-
-            if (!$deleted) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Film tidak ditemukan.'
-                ], 404);
-            }
+            Favorite::where('user_id', Auth::id())
+                    ->where('imdb_id', $imdbId)
+                    ->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Film berhasil dihapus dari favorites!'
+                'message' => 'Film dihapus dari favorites!',
             ]);
 
         } catch (\Throwable $th) {
-
-            Log::error('Favorite Destroy Error', [
-                'message' => $th->getMessage(),
-                'file'    => $th->getFile(),
-                'line'    => $th->getLine(),
-            ]);
-
+            Log::error('Error removing favorite: ' . $th->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage(),
-                'file'    => $th->getFile(),
-                'line'    => $th->getLine(),
+                'message' => 'Terjadi kesalahan.',
             ], 500);
         }
     }
